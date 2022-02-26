@@ -85,6 +85,9 @@ server.get("/read", function (req, res, next) {
     //기존에 작성되어 있던 게시물들을 다 불러온다.
     var articles = JSON.parse(fs.readFileSync("articles.json").toString());
 
+    //기존에 작성된 댓글들을 불러온다.
+    var comments = JSON.parse(fs.readFileSync("comments.json").toString());
+
     html = `<!doctype html><html><head><meta charset='utf-8'><title>게시물 읽기 화면</title></head><body>
     <table style = 'width: 40%'>
     <tr>
@@ -100,11 +103,40 @@ server.get("/read", function (req, res, next) {
         <td colspan='3' style='min-height:300px;'>${articles[no].content}</td>
     </tr>
     </table>
+    <div style='padding:0px 10px 10px 10px; border-top:2px solid #999; width:700px;'>
+        <form action='/comment' method='get'>
+            <input name='no' value='${no}' style='display:none;'>
+            <h4 style='margin:10px 0px 10px 5px;'> comment </h4>
+            <input type='text' name='commentName' placeholder='이름' style='margin-bottom: 10px; height:20px;'><br>
+            <textarea name='commentContent' placeholder='댓글 내용을 입력하세요' style='width:400px; height:150px; min-height:40px; resize: none;'></textarea>
+            <input type='submit' value='작성' style='width:80px; height:40px; transform:translatey(-40%);'>
+        </form>
+    </div>
     <a href='list'>목록으로 돌아가기</a>
     </body></html>`;
 
-
     res.send(html);
 });
+
+
+server.get("/comment", function (req, res, next) {
+    //기존에 작성된 댓글들을 불러온다.
+    var comments = JSON.parse(fs.readFileSync("comments.json").toString());
+    var no = req.query.no;
+    var comment = {
+        no: no,
+        name: req.query.commentName,
+        comment: req.query.commentContent,
+        regdt: new Date()
+    }
+
+    comments.unshift(comment);
+
+    //댓글을 다시 저장한다.
+    fs.writeFileSync("comments.json", Buffer.from(JSON.stringify(comments)));
+    //읽기 화면으로 돌아간다.
+    res.redirect(`/read?no=${no}`);
+});
+
 
 server.listen(3400);
