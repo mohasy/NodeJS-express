@@ -60,6 +60,22 @@ server.get("/list", function (req, res, next) {
     //기존에 작성되어 있던 게시물들을 다 불러온다.
     var articles = JSON.parse(fs.readFileSync("articles.json").toString());
     //페이지네이션 처리 
+    var page = 1; //현재 페이지
+    if (req.query.page) page = parseInt(req.query.page);
+
+    var pageCnt = 5; //페이지 보일 수
+    var postCnt = 10; // 게시글 보일 수
+
+    var end = page % pageCnt == 0 ? page : page - page % pageCnt + pageCnt; //현재 페이지의 마지막 번호
+    var start = page % pageCnt == 0 ? end - (pageCnt - 1) : page - page % pageCnt + 1; //현재 페이지의 첫 번호
+    var total = Math.ceil(articles.length / postCnt); //총 페이지
+    var next = end + 1; //다음 페이지
+    var prev = start - pageCnt; //이전 페이지
+    var last = page * postCnt; //게시글 마지막
+    var first = last - postCnt; //게시글 첫번쨰
+
+    if (last > articles.length) last = articles.length;
+    if (end > total) end = total;
 
     var html = `<!doctype html><html><head><meta charset='utf-8'><title>게시물 목록 화면</title><link rel="stylesheet" href="style.css"></head><body>
     <table style = 'width: 60%'>
@@ -77,21 +93,31 @@ server.get("/list", function (req, res, next) {
         <th >작성일시</th>
         <th>조회수</th>
     </tr>`;
-    for (var i = articles.length - 1; i >= 0; i--) {
+    for (var i = first; i < last; i++) {
         html += `<tr>
-            <td style='text-align:center; border-top: 1px solid #e7e7e7;'>${articles[i].boardNum}</td>`;
+            <td style='text-align:center; border-top: 1px solid #e7e7e7;'>${articles[articles.length - i - 1].boardNum}</td>`;
         if (articles[i].attach)
-            html += `<td style='border-top: 1px solid #e7e7e7;'><a href='read?no=${articles[i].boardNum}' style=' list-style: none; text-decoration: none; padding:0px 15px 0px 15px;'>${articles[i].subject}[첨]</a></td>`;
+            html += `<td style='border-top: 1px solid #e7e7e7;'><a href='read?no=${articles[articles.length - i - 1].boardNum}' style=' list-style: none; text-decoration: none; padding:0px 15px 0px 15px;'>${articles[articles.length - i - 1].subject} [첨]</a></td>`;
         else
-            html += `<td style='border-top: 1px solid #e7e7e7;'><a href='read?no=${articles[i].boardNum}' style=' list-style: none; text-decoration: none; padding:0px 15px 0px 15px;'>${articles[i].subject}</a></td>`;
+            html += `<td style='border-top: 1px solid #e7e7e7;'><a href='read?no=${articles[articles.length - i - 1].boardNum}' style=' list-style: none; text-decoration: none; padding:0px 15px 0px 15px;'>${articles[articles.length - i - 1].subject}</a></td>`;
 
         html += `
-            <td style='text-align:center; border-top: 1px solid #e7e7e7;'>${articles[i].writer}</td>
-            <td style='text-align:center; border-top: 1px solid #e7e7e7;'>${articles[i].regdt}</td>
-            <td style='text-align:center; border-top: 1px solid #e7e7e7;'>${articles[i].hitcount}</td>
+            <td style='text-align:center; border-top: 1px solid #e7e7e7;'>${articles[articles.length - i - 1].writer}</td>
+            <td style='text-align:center; border-top: 1px solid #e7e7e7;'>${articles[articles.length - i - 1].regdt}</td>
+            <td style='text-align:center; border-top: 1px solid #e7e7e7;'>${articles[articles.length - i - 1].hitcount}</td>
         </tr>`;
     }
-    html += `<a href='write.html' style=' list-style: none; text-decoration: none;'>글 쓰기</a></body></html>`;
+
+    html += `</table>
+    <div style='position: absolute; left: 25%; transform: translateX(-50%);'>
+    <a href='list?page=${prev < 0 ? 1 : prev}' class='btn' style= 'text-decoration:none; padding:5px;'>이전</a>`;
+
+    for (var i = start; i <= end; i++) {
+        var num = (page == i) ? `[${i}]` : i;
+        html += `<a href='list?page=${i}' ${page == i ? 'class=active' : ''} style= 'text-decoration:none; padding:5px;'>${num}</a>`;
+    }
+
+    html += `<a href='list?page=${next > total ? total : next}' class='btn' style= 'text-decoration:none; padding:5px;'>다음</a></div><br><a href='write.html' style=' list-style: none; text-decoration: none;'>글 쓰기</a></body></html>`;
     res.send(html);
 });
 
@@ -115,7 +141,7 @@ server.get("/read", function (req, res, next) {
 
     for (i = 0; i < comments.length; i++) {
         if (parseInt(comments[i].no) == no + 1) {
-            cmtArr.unshift(comments[i]);
+            cmtArr.push(comments[i]);
         }
     }
 
