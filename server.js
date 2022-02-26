@@ -2,7 +2,7 @@ var express = require("express");
 var server = express();
 var fs = require("fs");
 var multer = require("multer");
-var uploadMw = multer({dest:"./upload"});
+var uploadMw = multer({ dest: "./upload" });
 
 // 미들웨어 정의
 server.use(express.static("./statics"));
@@ -13,19 +13,19 @@ server.use(express.urlencoded());
 
 //글 쓰기 처리
 //uploadMw() - 업로드된 첨부파일을 저장하는 미들웨어
-server.post("/write", uploadMw.single("attach"), function(req, res, next) {
+server.post("/write", uploadMw.single("attach"), function (req, res, next) {
     //기존에 작성되어 있던 게시물들을 불러온다.
-    var articles =JSON.parse(fs.readFileSync("articles.json").toString());
+    var articles = JSON.parse(fs.readFileSync("articles.json").toString());
     //사용자가 작성한 새 게시물을 덧붙인다.
     var article = {
-        subject: req.body.subject, 
-        writer: req.body.writer, 
-        content: req.body.content, 
-        regdt: new Date(), 
+        subject: req.body.subject,
+        writer: req.body.writer,
+        content: req.body.content,
+        regdt: new Date(),
         hitcount: 0
     }
     //첨부파일이 존재하면 첨부파일도 저장
-    if(req.file) {
+    if (req.file) {
         article.attach = req.file.filename;
     };
     articles.unshift(article);
@@ -38,7 +38,7 @@ server.post("/write", uploadMw.single("attach"), function(req, res, next) {
 });
 
 //목록 화면
-server.get("/list", function (req, res, next){
+server.get("/list", function (req, res, next) {
     //기존에 작성되어 있던 게시물들을 다 불러온다.
     var articles = JSON.parse(fs.readFileSync("articles.json").toString());
     //페이지네이션 처리 
@@ -59,14 +59,14 @@ server.get("/list", function (req, res, next){
         <th>작성일시</th>
         <th>조회수</th>
     </tr>`;
-    for(var i=0; i<articles.length; i++){
+    for (var i = 0; i < articles.length; i++) {
         html += `<tr>
-            <td style='text-align:center;'>${articles.length-i}</td>`;
-        if(articles[i].attach)
-            html += `<td>${articles[i].subject}[첨]</td>`;
+            <td style='text-align:center;'>${articles.length - i}</td>`;
+        if (articles[i].attach)
+            html += `<td><a href='read?no=${i}'>${articles[i].subject}[첨]</a></td>`;
         else
-            html += `<td>${articles[i].subject}</td>`;
-            
+            html += `<td><a href='read?no=${i}'>${articles[i].subject}</a></td>`;
+
         html += `
             <td style='text-align:center;'>${articles[i].writer}</td>
             <td style='text-align:center;'>${articles[i].regdt}</td>
@@ -74,6 +74,36 @@ server.get("/list", function (req, res, next){
         </tr>`;
     }
     html += `<br><a href='write.html'>글 쓰기</a></body></html>`;
+    res.send(html);
+});
+
+//읽기 화면
+server.get("/read", function (req, res, next) {
+    //게시물 번호
+    var no = req.query.no;
+
+    //기존에 작성되어 있던 게시물들을 다 불러온다.
+    var articles = JSON.parse(fs.readFileSync("articles.json").toString());
+
+    html = `<!doctype html><html><head><meta charset='utf-8'><title>게시물 읽기 화면</title></head><body>
+    <table style = 'width: 40%'>
+    <tr>
+        <th>제목</th>
+        <td colspan='3'>${articles[no].subject}</td>
+    </tr>
+    <tr>
+        <th>작성자</th>
+        <td>${articles[no].writer}</td>
+    </tr>
+    <tr>
+        <th>본문</th>
+        <td colspan='3' style='min-height:300px;'>${articles[no].content}</td>
+    </tr>
+    </table>
+    <a href='list'>목록으로 돌아가기</a>
+    </body></html>`;
+
+
     res.send(html);
 });
 
