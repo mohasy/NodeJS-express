@@ -3,6 +3,11 @@ var server = express();
 var fs = require("fs");
 var multer = require("multer");
 var uploadMw = multer({ dest: "./upload" });
+var cp = require("cookie-parser");
+
+//EJS 템플릿 엔진을 설정
+server.set("view engine", "ejs");
+server.set("views", "./templates");
 
 // 미들웨어 정의
 server.use(express.static("./statics"));
@@ -10,6 +15,9 @@ server.use(express.static("./statics"));
 //urlencoded 미들웨어 정의
 //경고문구를 없애고 싶다면 express.urlencoded({extends:true})
 server.use(express.urlencoded());
+
+//쿠키 미들웨어
+server.use(cp());
 
 //날짜 형식
 function dateFormat(date) {
@@ -27,6 +35,73 @@ function dateFormat(date) {
 
     return date.getFullYear() + '-' + month + '-' + day + ' ' + hour + ':' + minute;
 }
+
+//로그인 처리
+server.post("/login", function(req, res, next){
+    //저장된 회원목록을 불러옴
+    var members = JSON.parse(fs.readFileSync("members.json").toString());
+    var nickname;
+    //회원목록을 순회하면서 지금 로그인을 시도하는 이 회원의 아이디가 존재하는지 확인한다.
+    var foundMember = members.filter(function(el){
+        if(el.id == req.body.id && el.password == req.body.password) {
+            nickname = el.nickname;
+            return true;
+        }else return false;
+    });
+
+    //필터링된 회원정보의 길이를 통해서 로그인 성공여부를 판별
+    if(foundMember.length != 1) {
+        //로그인 실패 처리
+        res.redirect("/loginFail.html");
+    }else{
+        //로그인 성공 처리
+        //쿠키 설정
+        res.cookie("login_id", req.body.id);
+        res.cookie("login_nickname", nickname);
+        res.redirect("/list");
+    }
+});
+
+//로그아웃 처리
+server.get("/logout", function(req, res, next){
+    res.clearCookie('login_id');
+    res.clearCookie('login_nickname');
+    res.redirect('/login.html');
+});
+
+//회원가입 처리
+server.post("/signup", function(req, res, next){
+    //저장된 회원목록을 불러옴
+    var members = JSON.parse(fs.readFileSync("members.json").toString());
+    //회원목록을 순회하면서 지금 회원가입을 시도하는 이 회원의 아이디가 존재하는지 확인한다.
+    var foundMember = members.filter(function(el){
+        if(el.id != req.body.id) return false;
+        else return true;
+    });
+
+    //필터링된 회원정보의 길이를 통해서 로그인 성공여부를 판별
+    if(foundMember.length != 0) {
+        //회원가입 실패 처리
+        res.redirect("/signupFail.html");
+    }else{
+        //회원가입 성공 처리
+        var member = {
+            id: req.body.id,
+            password: req.body.password,
+            nickname: req.body.nickname,
+        }
+
+        members.unshift(member);
+        fs.writeFileSync("members.json", Buffer.from(JSON.stringify(members)));
+
+        //쿠키 설정
+        res.cookie("login_id", req.body.id);
+        res.cookie("login_nickname", req.body.nickname);
+
+        //리스트 화면으로 돌아간다.
+        res.redirect("/list");
+    }
+});
 
 //글 쓰기 처리
 //uploadMw() - 업로드된 첨부파일을 저장하는 미들웨어
@@ -77,54 +152,30 @@ server.get("/list", function (req, res, next) {
     if (last > articles.length) last = articles.length;
     if (end > total) end = total;
 
-    var html = `<!doctype html><html><head><meta charset='utf-8'><title>게시물 목록 화면</title><link rel="stylesheet" href="style.css"></head><body>
-    <table style = 'width: 60%'>
-    <colgroup>
-        <col width='5%'>
-        <col width='50%'>
-        <col width='20%'>
-        <col width='10%'>
-        <col width='5%'>
-    </colgroup>
-    <tr>
-        <th style='text-align: center;'>번호</th>
-        <th>제목</th>
-        <th>작성자</th>
-        <th >작성일시</th>
-        <th>조회수</th>
-    </tr>`;
-    for (var i = first; i < last; i++) {
-        html += `<tr>
-            <td style='text-align:center; border-top: 1px solid #e7e7e7;'>${articles[articles.length - i - 1].boardNum}</td>`;
-        if (articles[i].attach)
-            html += `<td style='border-top: 1px solid #e7e7e7;'><a href='read?no=${articles[articles.length - i - 1].boardNum}' style=' list-style: none; text-decoration: none; padding:0px 15px 0px 15px;'>${articles[articles.length - i - 1].subject} [첨]</a></td>`;
-        else
-            html += `<td style='border-top: 1px solid #e7e7e7;'><a href='read?no=${articles[articles.length - i - 1].boardNum}' style=' list-style: none; text-decoration: none; padding:0px 15px 0px 15px;'>${articles[articles.length - i - 1].subject}</a></td>`;
+    //list.ejs로 데이터를 보내줌
+    res.render("list", {
+        "login_id": req.cookies.login_id,
+        "login_nickname": req.cookies.login_nickname,
+        "articles": articles,
+        "first": first,
+        "last": last,
+        "start": start,
+        "end": end,
+        "page": page,
+        "next": next,
+        "prev": prev,
+        "total": total,
 
-        html += `
-            <td style='text-align:center; border-top: 1px solid #e7e7e7;'>${articles[articles.length - i - 1].writer}</td>
-            <td style='text-align:center; border-top: 1px solid #e7e7e7;'>${articles[articles.length - i - 1].regdt}</td>
-            <td style='text-align:center; border-top: 1px solid #e7e7e7;'>${articles[articles.length - i - 1].hitcount}</td>
-        </tr>`;
-    }
-
-    html += `</table>
-    <div style='position: absolute; left: 25%; transform: translateX(-50%);'>
-    <a href='list?page=${prev < 0 ? 1 : prev}' class='btn' style= 'text-decoration:none; padding:5px;'>이전</a>`;
-
-    for (var i = start; i <= end; i++) {
-        var num = (page == i) ? `[${i}]` : i;
-        html += `<a href='list?page=${i}' ${page == i ? 'class=active' : ''} style= 'text-decoration:none; padding:5px;'>${num}</a>`;
-    }
-
-    html += `<a href='list?page=${next > total ? total : next}' class='btn' style= 'text-decoration:none; padding:5px;'>다음</a></div><br><a href='write.html' style=' list-style: none; text-decoration: none;'>글 쓰기</a></body></html>`;
-    res.send(html);
+    });
 });
 
 //읽기 화면
 server.get("/read", function (req, res, next) {
     //게시물 번호
     var no = req.query.no - 1;
+
+    //이전 페이지 번호
+    var page = req.query.page;
 
     //기존에 작성되어 있던 게시물들을 다 불러온다.
     var articles = JSON.parse(fs.readFileSync("articles.json").toString());
@@ -145,48 +196,13 @@ server.get("/read", function (req, res, next) {
         }
     }
 
-    html = `<!doctype html><html><head><meta charset='utf-8'><title>게시물 읽기 화면</title></head><body>
-
-    <div style='border: 1px solid #ddd; border-radius:3px; width:700px;'>
-    <div style='list-style:none; padding: 20px 10px;'>
-        <h2 style='margin:0px; padding-bottom:10px; padding: 0px 40px 5px 40px;'>${articles[no].subject}</h2>
-            <ul style='list-style:none; margin: 0px; float:left; display:inline-block; border-bottom:2px solid #ddd; width:600px; padding: 0px 40px 10px 40px;'>
-                <li style='display:inline-block;'>${articles[no].writer}</li>
-                <li style='font-size:0.75em; color:#bbb; display:inline-block; padding: 0px 10px; '>${articles[no].regdt}</li>
-                <li style='font-size:0.75em; color:#bbb; display:inline-block; '>조회수 ${articles[no].hitcount}</li>
-            </ul><br>
-        <div style='font-size: 18px; padding: 40px 40px 20px 40px;'>${articles[no].content}</div>
-    </div>
-
-    <div style=' padding: 0px 10px;'>
-        <div style='padding:0px 10px 10px 10px; border-top:2px solid #ddd;'>
-            <form action='/comment' method='get'>
-                <input name='no' value='${no + 1}' style='display:none;'>
-                <h4 style='margin:10px 0px 10px 5px;'> comments </h4>
-                <input type='text' name='name' placeholder='이름' style='margin-bottom: 10px; height:20px;'><br>
-                <textarea name='content' placeholder='댓글 내용을 입력하세요' style='width:400px; height:100px; min-height:40px; resize: none;'></textarea>
-                <input type='submit' value='작성' style='width:80px; height:40px; transform:translatey(-40%);'>
-            </form>
-        </div>`;
-
-    for (var i = 0; i < cmtArr.length; i++) {
-        html += `
-        <ul style='list-style:none; padding:15px 5px 5px 20px; border-top:2px solid #ddd; width:600px; margin: 0px;'>
-            <li style=' padding=5px;'>
-                    <ul style='list-style:none; padding: 0px; float:left; display:inline-block'>
-                        <li style='display:inline-block;'>${cmtArr[i].name}</li>
-                        <li style='font-size:0.75em; color:#bbb; display:inline-block; '>${cmtArr[i].regdt}</li>
-                    </ul>
-                    <p style='clear:both; padding:15px 0px 0px; color:#777; font:normal 0.875em 'NanumBarunGothic', 'Noto Sans', sans-serif; line-height:1.5em;'>${cmtArr[i].content}</p>
-            </li>
-        </ul>
-        `;
-    }
-
-    html += `</div></div><button><a href='list' style='text-decoration:none;'>목록으로 돌아가기</a></button>
-    </body></html>`;
-
-    res.send(html);
+        //read.ejs로 데이터를 보내줌
+        res.render("read", {
+            "articles": articles,
+            "no": no,
+            "cmtArr": cmtArr,
+            "page": page,
+        });
 });
 
 

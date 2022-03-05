@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>글 읽기 화면</title>
+    </head>
+    <body>
+        <div style='border: 1px solid #ddd; border-radius:3px; width:700px;'>
+            <div style='list-style:none; padding: 20px 10px;'>
+                <h2 style='margin:0px; padding-bottom:10px; padding: 0px 40px 5px 40px;'><%=articles[no].subject%></h2>
+                <ul
+                    style='list-style:none; margin: 0px; float: left; display:inline-block; border-bottom:2px solid #ddd; width:600px; padding: 0px 40px 10px 40px;'>
+                    <li style='display:inline-block;'><%=articles[no].writer%></li>
+                    <li style='font-size:0.75em; color:#bbb; display:inline-block; padding: 0px 10px; '> <%=articles[no].regdt%></li>
+                    <li style='font-size:0.75em; color:#bbb; display:inline-block; '>조회수 <%=articles[no].hitcount%></li>
+                </ul><br>
+                <div style='font-size: 18px; padding: 40px 40px 20px 40px;'><%=articles[no].content%></div>
+            </div>
+
+            <div style=' padding: 0px 10px;'>
+                <div style='padding:0px 10px 10px 10px; border-top:2px solid #ddd;'>
+                    <form action='/comment' method='get'>
+                        <input name='no' value='<%=no + 1%>' style='display:none;'>
+                        <h4 style='margin:10px 0px 10px 5px;'> comments </h4>
+                        <input type='text' name='name' placeholder='이름' style='margin-bottom: 10px; height:20px;'><br>
+                        <textarea name='content' placeholder='댓글 내용을 입력하세요'
+                            style='width:400px; height:100px; min-height:40px; resize: none;'></textarea>
+                        <input type='submit' value='작성' style='width:80px; height:40px; transform:translatey(-40%);'>
+                    </form>
+                </div>
+
+                <% for (var i = 0; i < cmtArr.length; i++) { %>
+                    <ul style='list-style:none; padding:15px 5px 5px 20px; border-top:2px solid #eee; width:600px; margin: 0px;'>
+                        <li style= 'padding: 5px;'>
+                            <ul style='list-style:none; padding: 0px; float: left; display:inline-block'>
+                                <li style='display:inline-block;'><%= cmtArr[i].name %></li>
+                                <li style='font-size:0.75em; color:#bbb; display:inline-block; '><%= cmtArr[i].regdt %></li>
+                            </ul>
+                            <p style='clear:both; padding:15px 0px 0px; color:#777; font:normal 0.875em "NanumBarunGothic", "Noto Sans" , sans-serif; line-height:1.5em;'><%= cmtArr[i].content %></p>
+                        </li>
+                    </ul>
+                <% } %>
+
+            </div>
+        </div>
+        <button><a href='list?page=<%=page%>' style='text-decoration:none;'>목록으로 돌아가기</a></button>
+    </body>
+</html>

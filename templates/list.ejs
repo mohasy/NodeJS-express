@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>게시판 목록</title>
+    </head>
+    <body>
+        <% if(login_id && login_nickname) { %>
+            <h1><%= login_nickname%>(<%=login_id%>)님 환영합니다! <a href="/logout">로그아웃하기</a></h1>
+        <% }else{ %>
+            <h1>방문객님 환영합니다! <a href="/login.html">로그인</a> 하세요.</h1>
+        <% } %> 
+        <table style='width: 60%'>
+            <colgroup>
+                <col width='5%'>
+                <col width='50%'>
+                <col width='20%'>
+                <col width='10%'>
+                <col width='5%'>
+            </colgroup>
+            <tr>
+                <th style='text-align: center;'>번호</th>
+                <th>제목</th>
+                <th>작성자</th>
+                <th>작성일시</th>
+                <th>조회수</th>
+            </tr>
+
+            <%for (var i=first; i < last; i++) { %>
+                <tr>
+                    <td style='text-align:center; border-top: 1px solid #e7e7e7;'>
+                        <%articles[articles.length - i - 1].boardNum%>
+                    </td>
+                    <td style='border-top: 1px solid #e7e7e7;'><a
+                            href='read?no=<%=articles[articles.length - i - 1].boardNum%>&page=<%=page%>'
+                            style=' list-style: none; text-decoration: none; padding:0px 15px 0px 15px;'>
+                            <%=articles[articles.length - i - 1].subject%>
+                                <%if (articles[i].attach){%>[첨]<%}%>
+                        </a></td>
+
+
+                    <td style='text-align:center; border-top: 1px solid #e7e7e7;'>
+                        <%=articles[articles.length - i - 1].writer%>
+                    </td>
+                    <td style='text-align:center; border-top: 1px solid #e7e7e7;'>
+                        <%=articles[articles.length - i - 1].regdt%>
+                    </td>
+                    <td style='text-align:center; border-top: 1px solid #e7e7e7;'>
+                        <%=articles[articles.length - i - 1].hitcount%>
+                    </td>
+                </tr>
+                <%}%>
+
+        </table>
+        <div style='position: absolute; left: 25%; transform: translateX(-50%);'>
+            <% if(prev<0){ %>
+                <a href='list?page=1' class='btn' style='text-decoration:none; padding:5px;'>이전</a>
+            <% }else { %>
+                <a href='list?page=<%=prev%>' class='btn' style='text-decoration:none; padding:5px;'>이전</a>
+            <%}%>
+
+            <% for (var i=start; i <=end; i++) { 
+                var num=(page==i) ? `[${i}]` : i; 
+            %>
+                <a href='list?page=<%i%>' style='text-decoration:none; padding:5px;'><%=num%></a>
+            <%}%>
+
+            <% if(next> total){ %>
+                <a href='list?page=<%total%>' class='btn' style='text-decoration:none; padding:5px;'>다음</a>
+            <% }else { %>
+                <a href='list?page=<%=next%>' class='btn' style='text-decoration:none; padding:5px;'>다음</a>
+            <%}%>
+        </div><br>
+        
+            <a href='<% if(login_id && login_nickname) { %> write.html<% } else {%> writeFail.html <%} %>' style=' list-style: none; text-decoration: none;'>글 쓰기</a>
+        
+    </body>
+</html>
